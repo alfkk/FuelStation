@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <title>Java Fuel Stations Map</title>
+
+        <!-- Core CSS -->
+        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+        <link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+        <link href="assets/typeahead.js/typeahead.js-bootstrap.css" rel="stylesheet" type="text/css"> <!--https://github.com/jharding/typeahead.js-bootstrap.css-->
+        <link href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" rel="stylesheet" type="text/css">
+				
+				<!-- Additional CSS -->
+				<link href="lib/MarkerCluster.Default.css" rel="stylesheet" type="text/css">
+				<link href="lib/MarkerCluster.css" rel="stylesheet" type="text/css">
+				
+        <!-- Custom styles for this template -->
+        <style>
+            html, body, #map {
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+            }
+            body {
+                padding-top: 50px;
+            }
+            input[type="radio"], input[type="checkbox"] {
+                margin: 0;
+            }
+            #loading {
+                position: absolute;
+                width: 220px;
+                height: 19px;
+                top: 50%;
+                left: 50%;
+                margin: -10px 0 0 -110px;
+                z-index: 20001;
+            }
+            .leaflet-control-layers label {
+                font-weight: normal;
+                margin-bottom: 0px;
+            }
+            .table {
+                margin-bottom: 0px;
+            }
+            .navbar .navbar-brand {
+                font-weight: bold;
+                font-size: 25px;
+                color: white;
+            }
+            .navbar-collapse.in {
+                overflow-y: hidden;
+            }
+            .tt-hint, .tt-query {
+                display: block;
+                width: 100%;
+                height: 34px;
+                padding: 6px 12px;
+                font-size: 14px;
+                border-radius: 4px;
+            }
+            .typeahead-header {
+                margin: 0 5px 5px 5px;
+                padding: 3px 0;
+                border-bottom: 2px solid #333;
+            }
+            .tt-suggestion + .tt-suggestion {
+                border-top: 1px solid #ccc;
+            }
+            .leaflet-control-layers-expanded {
+                opacity: 0.9;
+            }
+            .leaflet-popup-content {
+                margin-top: 5px;
+                margin-bottom: 5px;
+                margin-left: 5px;
+                margin-right: 5px;
+            }
+            .leaflet-popup-content-wrapper {
+                border-radius: 5px;
+            }
+            @media (max-width: 992px) {
+                .navbar .navbar-brand {
+                    font-size: 18px;
+                }
+            }
+            @media (max-width: 767px){
+                .url-break {
+                    word-break: break-all;
+                    word-break: break-word;
+                    -webkit-hyphens: auto;
+                    hyphens: auto;
+                }
+            }
+            /* Print Handling */
+            @media print {
+                .navbar {
+                    display: none !important;
+                }
+                .leaflet-control-container {
+                    display: none !important;
+                }
+            }
+            /* Choropleth */
+            .info {
+				padding: 6px 8px;
+				font: 14px/16px Arial, Helvetica, sans-serif;
+				background: white;
+				background: rgba(255,255,255,0.8);
+				box-shadow: 0 0 15px rgba(0,0,0,0.2);
+				border-radius: 5px;
+			}
+			.info h4 {
+				margin: 0 0 5px;
+				color: #777;
+			}
+	
+			.legend {
+				text-align: left;
+				line-height: 18px;
+				color: #555;
+			}
+			.legend i {
+				width: 18px;
+				height: 18px;
+				float: left;
+				margin-right: 8px;
+				opacity: 0.7;
+			}
+        </style>
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+
+    <body>
+        <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Fuel Stations</a>
+            </div>
+            <div class="navbar-collapse collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="#aboutModal" data-toggle="modal"><i class="fa fa-question-circle" style="color: white"></i>&nbsp;&nbsp;About</a></li>
+                    <li class="dropdown">
+	                    <a id="downloadDrop" href="#" role="button" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cloud-download" style="color: white"></i>&nbsp;&nbsp;Download <b class="caret"></b></a>
+	                    <ul class="dropdown-menu">
+	                    	<li><a href="data/fuel.geojson" download="fuel.geojson" target="_blank" data-toggle="collapse" data-target=".navbar-collapse.in"><i class="fa fa-download"></i>&nbsp;&nbsp;Fuel Stations</a></li>
+	                    	<li><a href="data/road_primary.geojson" download="road_primary.geojson" target="_blank" data-toggle="collapse" data-target=".navbar-collapse.in"><i class="fa fa-download"></i>&nbsp;&nbsp;Primary Road</a></li>
+	                    	<li><a href="data/road_secondary.geojson" download="road_secondary.geojson" target="_blank" data-toggle="collapse" data-target=".navbar-collapse.in"><i class="fa fa-download"></i>&nbsp;&nbsp;Secondary Road</a></li>
+	                    	<li><a href="data/population.geojson" download="population.geojson" target="_blank" data-toggle="collapse" data-target=".navbar-collapse.in"><i class="fa fa-download"></i>&nbsp;&nbsp;Population Count</a></li>	
+	                    </ul>
+                    </li>                   
+                </ul>
+            </div><!--/.navbar-collapse -->
+        </div>
+
+        <div id="map"></div>
+        <div id="loading" style="display:block;">
+            <div class="loading-indicator">
+                <div class="progress progress-striped active">
+                    <div class="progress-bar progress-bar-info" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="aboutModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title">Welcome to Fuel Stations Web Application</h4>
+                    </div>
+
+                    <div class="modal-body">
+                         <ul id="aboutTabs" class="nav nav-tabs">
+                            <li class="active"><a href="#about" data-toggle="tab"><i class="fa fa-question-circle"></i>&nbsp;About the project</a></li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-globe"></i>&nbsp;Metadata <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#fuel-tab" data-toggle="tab">Fuel Stations</a></li>
+                                    <li><a href="#pri-road-tab" data-toggle="tab">Primary Road</a></li>
+                                    <li><a href="#sec-road-tab" data-toggle="tab">Secondary Road</a></li>
+                                    <li><a href="#pop-tab" data-toggle="tab">Population Count</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <div id="aboutTabsContent" class="tab-content" style="padding-top: 10px;">
+                            <div class="tab-pane fade active in" id="about">
+                                <p>
+                                Fuel stations web application is a geospatial application that aims to discover pattern in fuel stations distribution in Java island.
+                                <br /><br />
+                                The fuel stations distribution analysis will be aided by other layers mainly, primary road, secondary road, and population count by level 2 administrative boundaries.
+                                </p>
+                            </div>
+                            <div class="tab-pane fade" id="fuel-tab">
+                            	<p>Fuel Stations data courtesy of <a href="http://thinkgeo.com/map-data/openstreetmap-data/#osm-details" target="_blank">ThinkGeo Website</a></p>
+                            </div>
+                            <div class="tab-pane fade" id="pri-road-tab">
+	                            <p>Primary Road data courtesy of <a href="http://thinkgeo.com/map-data/openstreetmap-data/#osm-details" target="_blank">ThinkGeo Website</a></p>
+	                          </div>
+	                          <div class="tab-pane fade" id="sec-road-tab">
+	                            <p>Secondary Road data courtesy of <a href="http://thinkgeo.com/map-data/openstreetmap-data/#osm-details" target="_blank">ThinkGeo Website</a></p>
+	                          </div>
+	                          <div class="tab-pane fade" id="pop-tab">
+	                            <p>Population Count by Level 2 Administrative Boundaries data courtesy of <a href="http://www.gadm.org/" target="_blank">Global Administrative Areas Website</a> and <a href="http://www.datastatistik-indonesia.com/portal/index.php?option=com_staticxt&staticfile=depan.php&Itemid=17" target="_blank">Statistics Indonesia Website</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+        <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="assets/typeahead.js/typeahead.min.js"></script> <!--https://github.com/twitter/typeahead.js/-->
+        <script type="text/javascript" src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+        <script type="text/javascript" src="lib/leaflet.markercluster.js"></script>
+        <script type="text/javascript">
+            var map;
+            
+            // Load data
+            var fuel = (function () {
+					    var fuel = null;
+						    $.ajax({
+					        'async': false,
+					        'global': false,
+					        'url': 'data/fuel.geojson',
+					        'dataType': "json",
+					        'success': function (data) {
+					            fuel = data;
+					        }
+						    });
+					    return fuel;
+						})(); 
+
+            // Basemap Layers
+            var streetLayer = L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            });
+            var aerialLayer = L.tileLayer("http://otile1.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.png", {
+                maxZoom: 11,
+                attribution: '&copy; <a href="http://info.mapquest.com/terms-of-use">MapQuest</a> contributors'
+            });
+
+            // Overlay Layers
+            var fuelLayer = L.markerClusterGroup();
+            var fuel = L.geoJson(null, {
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, {
+                        icon: L.icon({
+                            iconUrl: "img/gas.png",
+                            iconSize: [30, 34	],
+                            iconAnchor: [12, 28],
+                            popupAnchor: [0, -25]
+                        }),
+                        title: feature.properties.NAME,
+                        riseOnHover: true
+                    });
+                },
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                        var content =   "<table class='table table-striped table-bordered table-condensed'>"+
+                                            "<tr><th>Name</th><td>" + feature.properties.name + "</td></tr>"+
+                                        "<table>";
+                        if (document.body.clientWidth <= 767) {
+                            layer.on({
+                                click: function(e) {
+                                    $("#feature-title").html(feature.properties.NAME);
+                                    $("#feature-info").html(content);
+                                    $("#featureModal").modal("show");
+                                }
+                            });
+
+                        } else {
+                            layer.bindPopup(content, {
+                                maxWidth: "auto",
+                                closeButton: false
+                            });
+                        };
+                    }
+                }
+            });
+            $.getJSON("data/fuel.geojson", function (data) {
+                fuel.addData(data);
+                fuelLayer.addLayer(fuel);
+            });
+            
+            var primaryRoad = L.geoJson(null, {
+            	style: function (feature) {
+	                return {
+	                    color: "#6a9c53",
+	                    weight: 2,
+	                    opacity: 1
+	                };
+            	},
+            	onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                        var content =   "<table class='table table-striped table-bordered table-condensed'>"+
+                                            "<tr><th>Division</th><td>" + feature.properties.Division + "</td></tr>"+
+                                            "<tr><th>Line</th><td>" + feature.properties.Line + "</td></tr>"+
+                                        "<table>";
+                        if (document.body.clientWidth <= 767) {
+                            layer.on({
+                                click: function(e) {
+                                    $("#feature-title").html(feature.properties.Line);
+                                    $("#feature-info").html(content);
+                                    $("#featureModal").modal("show");
+                                }
+                            });
+
+                        } else {
+                            layer.bindPopup(content, {
+                                maxWidth: "auto",
+                                closeButton: false
+                            });
+                        };
+                    }
+                    layer.on({
+                        mouseover: function(e) {
+                            var layer = e.target;
+                            layer.setStyle({
+                                weight: 2,
+                                color: "#6a9c53",
+                                opacity: 1
+                            });
+                            if (!L.Browser.ie && !L.Browser.opera) {
+                                layer.bringToFront();
+                            }
+                        },
+                        mouseout: function(e) {
+                            primaryRoad.resetStyle(e.target);
+                        }
+                    });
+                }
+            });
+            $.getJSON("data/road_primary.geojson", function (data) {
+                primaryRoad.addData(data);
+            });
+            
+            var secondaryRoad = L.geoJson(null, {
+            	style: function (feature) {
+	                return {
+	                    color: "#0279ec",
+	                    weight: 1,
+	                    opacity: 1
+	                };
+            	},
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                        var content =   "<table class='table table-striped table-bordered table-condensed'>"+
+                                            "<tr><th>Division</th><td>" + feature.properties.Division + "</td></tr>"+
+                                            "<tr><th>Line</th><td>" + feature.properties.Line + "</td></tr>"+
+                                        "<table>";
+                        if (document.body.clientWidth <= 767) {
+                            layer.on({
+                                click: function(e) {
+                                    $("#feature-title").html(feature.properties.Line);
+                                    $("#feature-info").html(content);
+                                    $("#featureModal").modal("show");
+                                }
+                            });
+
+                        } else {
+                            layer.bindPopup(content, {
+                                maxWidth: "auto",
+                                closeButton: false
+                            });
+                        };
+                    }
+                    layer.on({
+                        mouseover: function(e) {
+                            var layer = e.target;
+                            layer.setStyle({
+                                weight: 1,
+                                color: "#0279ec",
+                                opacity: 1
+                            });
+                            if (!L.Browser.ie && !L.Browser.opera) {
+                                layer.bringToFront();
+                            }
+                        },
+                        mouseout: function(e) {
+                            secondaryRoad.resetStyle(e.target);
+                        }
+                    });
+                }
+            });
+            $.getJSON("data/road_secondary.geojson", function (data) {
+                secondaryRoad.addData(data);
+            });
+            
+            var population = L.geoJson(null, {
+                style: function (feature) {
+                	return {
+        				weight: 2,
+        				opacity: 1,
+        				color: 'white',
+        				dashArray: '3',
+        				fillOpacity: 0.7,
+        				fillColor: getColor(feature.properties.Daerah_total)
+        			};
+                },
+                onEachFeature: function (feature, layer) {
+                	layer.on({
+        				mouseover: function (e) {
+        					var layer = e.target;
+
+        					layer.setStyle({
+        						weight: 5,
+        						color: '#666',
+        						dashArray: '',
+        						fillOpacity: 0.7
+        					});
+
+        					if (!L.Browser.ie && !L.Browser.opera) {
+        						layer.bringToFront();
+        					}
+
+        					info.update(layer.feature.properties);
+        				},
+        				mouseout: function (e) {
+        					population.resetStyle(e.target);
+        					info.update();
+        				},
+        				click: function (e) {
+        					map.fitBounds(e.target.getBounds());
+        				}
+        			});
+                }
+            });
+            $.getJSON("data/population.geojson", function (data) {
+                population.addData(data);
+            });
+            
+            map = L.map("map", {
+                zoom: 7,
+                center: [-7.5, 110.5],
+                layers: [streetLayer, fuelLayer]
+            });
+            
+            // Larger screens get expanded layer control
+            if (document.body.clientWidth <= 767) {
+                var isCollapsed = true;
+            } else {
+                var isCollapsed = false;
+            };
+
+            var baseLayers = {
+                "Streets": streetLayer,
+                "Aerial": aerialLayer
+            };
+
+            var overlays = {
+            	"<img src='img/gas.png' width='16' height='20'>&nbsp;Fuel Station": fuelLayer,
+            	"Primary Road": primaryRoad,
+            	"Secondary Road": secondaryRoad,
+            	"Population Density": population
+            };
+
+            var layerControl = L.control.layers(baseLayers, overlays, {
+                collapsed: isCollapsed
+            }).addTo(map);
+            
+            // Choropleth function
+            // get color depending on population density value
+			function getColor(d) {
+				return d > 4000000 ? '#800026' :
+				       d > 3500000 ? '#BD0026' :
+				       d > 3000000 ? '#E31A1C' :
+				       d > 2500000 ? '#FC4E2A' :
+				       d > 2000000 ? '#FD8D3C' :
+				       d > 1500000 ? '#FEB24C' :
+				       d > 1000000 ? '#FED976' :
+				                  	 '#FFEDA0' ;
+			}
+            
+            // Choropleth legend
+            var legend = L.control({position: 'bottomright'});
+
+			legend.onAdd = function (map) {
+	
+				var div = L.DomUtil.create('div', 'info legend'),
+					grades = [0, 1000000, 1500000, 2000000, 2500000, 3000000, 3500000, 4000000],
+					labels = [],
+					from, to;
+	
+				for (var i = 0; i < grades.length; i++) {
+					from = grades[i];
+					to = grades[i + 1];
+	
+					labels.push(
+						'<i style="background:' + getColor(from + 1) + '"></i> ' +
+						from + (to ? '&ndash;' + to : '+'));
+				}
+	
+				div.innerHTML = labels.join('<br>');
+				return div;
+			};
+			
+			var info = L.control({position: 'bottomright'});
+
+			info.onAdd = function (map) {
+			    this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+			    this.update();
+			    return this._div;
+			};
+			
+			// method that we will use to update the control based on feature properties passed
+			info.update = function (props) {
+			    this._div.innerHTML = '<h4>US Population Count</h4>' +  (props ?
+			        '<b>' + props.NAME_2 + '</b><br />' + addCommas(props.Daerah_total) + ' people'
+			        : 'Hover over an area');
+			};
+
+			
+			// Map behaviour
+			map.on('overlayadd', function (eventLayer) {
+			    if (eventLayer.name === 'Population Density') {
+			        legend.addTo(this);
+			        info.addTo(this);
+			    }
+			});
+			
+			map.on('overlayremove', function (eventLayer) {
+			    if (eventLayer.name === 'Population Density') {
+			        this.removeControl(legend);
+			        this.removeControl(info);
+			    }
+			});
+
+            // Typeahead search functionality
+            $(document).one("ajaxStop", function () {
+                $("#loading").hide();
+            });
+
+            // Placeholder hack for IE
+            if (navigator.appName == "Microsoft Internet Explorer") {
+                $("input").each( function () {
+                    if ($(this).val() == "" && $(this).attr("placeholder") != "") {
+                        $(this).val($(this).attr("placeholder"));
+                        $(this).focus(function () {
+                            if ($(this).val() == $(this).attr("placeholder")) $(this).val("");
+                        });
+                        $(this).blur(function () {
+                            if ($(this).val() == "") $(this).val($(this).attr("placeholder"));
+                        });
+                    }
+                });
+            }
+			
+			// Add comma to number
+            function addCommas(x) {
+            	return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+			}
+        </script>
+    </body>
+</html>
